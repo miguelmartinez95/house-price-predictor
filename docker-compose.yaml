@@ -1,0 +1,58 @@
+version: "3.9"
+
+services:
+  # ----------------------------
+  # 1️⃣ FastAPI Backend Service
+  # ----------------------------
+  fastapi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fastapi-backend
+    ports:
+      - "8000:8000"
+    restart: always
+    networks:
+      - app-network
+
+  # ----------------------------
+  # 2️⃣ Streamlit Frontend Service
+  # ----------------------------
+  streamlit:
+    build:
+      context: ./streamlit_app
+      dockerfile: Dockerfile
+    container_name: streamlit-frontend
+    ports:
+      - "8501:8501"
+    restart: always
+    depends_on:
+      - fastapi
+    environment:
+      # Let Streamlit know where the backend lives (optional)
+      FASTAPI_URL: "http://fastapi:8000"
+    networks:
+      - app-network
+
+  # ----------------------------
+  # 3️⃣ MLflow Tracking Server
+  # ----------------------------
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:latest
+    container_name: mlflow-tracking-server
+    ports:
+      - "5555:5000"
+    command: >
+      mlflow server
+      --host 0.0.0.0
+      --default-artifact-root /tmp/mlruns
+    restart: always
+    networks:
+      - app-network
+
+# ----------------------------
+# Shared network
+# ----------------------------
+networks:
+  app-network:
+    driver: bridge
