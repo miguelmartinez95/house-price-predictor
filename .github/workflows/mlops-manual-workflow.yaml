@@ -1,7 +1,7 @@
 name: MLOps Pipeline
 
 on:
-  worflow_dispatch:
+  workflow_dispatch:
     inputs:
       run_all:
         description: 'Run all jobs'
