@@ -106,7 +106,7 @@ jobs:
             mlflow server `
               --host 0.0.0.0 `
               --backend-store-uri sqlite:///mlflow.db `
-              --default-artifact-root C:\Users\mmcomesana\Cursos\Udemy\MLOps\house-price-predictor\actions-runner\mlruns
+              --default-artifact-root file:///mlruns
 
     - name: Wait for MLFlow to start
       shell: powershell
