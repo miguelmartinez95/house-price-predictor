@@ -1,4 +1,4 @@
-name: Build, Push, and Deploy Streamlit App
+name: Build, Push, and Deploy Streamlit App Windows
 
 on:
   workflow_dispatch:    # for manual runs
