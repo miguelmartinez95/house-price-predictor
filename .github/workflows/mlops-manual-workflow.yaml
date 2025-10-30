@@ -205,13 +205,13 @@ jobs:
         echo "Waiting for rollout...."
         kubectl rollout status deployment/house-predictor
 
-    - name: Trigger Streamlit Deploy workflow
-      uses: peter-evans/workflow-dispatch@v2
+    - name: Trigger Streamlit workflow
+      uses: peter-evans/repository-dispatch@v3
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         repository: ${{ github.repository }}
-        workflow: "Build, Push, and Deploy Streamlit App"
-        ref: main
+        event-type: deploy-streamlit
+        client-payload: '{"ref": "main"}'
 
 
 
