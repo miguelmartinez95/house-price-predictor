@@ -218,30 +218,29 @@ jobs:
     - name: Deploy new image to Kubernetes
       shell: powershell
       run: |
-        $COMMIT_HASH = $env:GITHUB_SHA.Substring(0,7)
-        $IMAGE = "docker.io/${{ vars.DOCKERHUB_USERNAME }}/house-price-model:$COMMIT_HASH"
-        Write-Host "Deploying image: $IMAGE"
-
+        $IMAGE_NAME = "docker.io/${{ vars.DOCKERHUB_USERNAME }}/streamlit-app:latest"
+        Write-Host "Deploying Streamlit app using image $IMAGE_NAME"
+    
+        # Try to get deployment
+        $deploymentExists = $false
         try {
-          # Check if deployment exists without throwing an error
-          $deploymentExists = kubectl get deployment house-predictor -o name 2>$null
-          if (-not $deploymentExists) {
-            Write-Host "Deployment not found — creating it..."
-            kubectl create deployment house-predictor --image=$IMAGE | Out-Null
-            kubectl expose deployment house-predictor --type=LoadBalancer --port=8000 --target-port=8000 | Out-Null
-          } else {
-            Write-Host "Deployment found — updating image..."
-            kubectl set image deployment/house-predictor house-predictor=$IMAGE --record
-          }
-
-          # Wait for rollout to complete
-          Write-Host "Waiting for deployment rollout..."
-          kubectl rollout status deployment/house-predictor
+            kubectl get deployment streamlit -o name | Out-Null
+            $deploymentExists = $true
+        } catch {
+            Write-Host "Deployment not found, will create a new one."
         }
-        catch {
-          Write-Error "❌ Deployment failed: $($_.Exception.Message)"
-          exit 1
+    
+        if (-not $deploymentExists) {
+            Write-Host "Creating new deployment..."
+            kubectl create deployment streamlit --image=$IMAGE_NAME | Out-Null
+            kubectl expose deployment streamlit --type=LoadBalancer --port=8501 --target-port=8501 | Out-Null
+        } else {
+            Write-Host "Updating existing deployment..."
+            kubectl set image deployment/streamlit streamlit=$IMAGE_NAME --record
         }
+    
+        # Wait for rollout
+        kubectl rollout status deployment/streamlit
 
     - name: Trigger Streamlit workflow
       uses: peter-evans/repository-dispatch@v3
