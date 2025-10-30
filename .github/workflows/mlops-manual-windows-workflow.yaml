@@ -220,18 +220,28 @@ jobs:
       run: |
         $COMMIT_HASH = $env:GITHUB_SHA.Substring(0,7)
         $IMAGE = "docker.io/${{ vars.DOCKERHUB_USERNAME }}/house-price-model:$COMMIT_HASH"
-        
-        # Check if the deployment exists
-        if (-not (kubectl get deployment house-predictor -o name 2>$null)) {
-          Write-Host "Deployment not found. Creating new deployment..."
-          kubectl create deployment house-predictor --image=$IMAGE
-          kubectl expose deployment house-predictor --type=LoadBalancer --port=8000 --target-port=8000
-        } else {
-          Write-Host "Updating existing deployment..."
-          kubectl set image deployment/house-predictor house-predictor=$IMAGE
+        Write-Host "Deploying image: $IMAGE"
+
+        try {
+          # Check if deployment exists without throwing an error
+          $deploymentExists = kubectl get deployment house-predictor -o name 2>$null
+          if (-not $deploymentExists) {
+            Write-Host "Deployment not found — creating it..."
+            kubectl create deployment house-predictor --image=$IMAGE | Out-Null
+            kubectl expose deployment house-predictor --type=LoadBalancer --port=8000 --target-port=8000 | Out-Null
+          } else {
+            Write-Host "Deployment found — updating image..."
+            kubectl set image deployment/house-predictor house-predictor=$IMAGE --record
+          }
+
+          # Wait for rollout to complete
+          Write-Host "Waiting for deployment rollout..."
+          kubectl rollout status deployment/house-predictor
         }
-        
-        kubectl rollout status deployment/house-predictor
+        catch {
+          Write-Error "❌ Deployment failed: $($_.Exception.Message)"
+          exit 1
+        }
 
     - name: Trigger Streamlit workflow
       uses: peter-evans/repository-dispatch@v3

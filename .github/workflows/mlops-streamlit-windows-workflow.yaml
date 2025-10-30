@@ -61,15 +61,17 @@ jobs:
       run: |
         $IMAGE_NAME = "docker.io/${{ vars.DOCKERHUB_USERNAME }}/streamlit-app:latest"
         Write-Host "Deploying Streamlit app using image $IMAGE_NAME"
-
+    
         # Check if the deployment exists
-        if (-not (kubectl get deployment streamlit -o name 2>$null)) {
+        $deploymentExists = kubectl get deployment streamlit -o name 2>$null
+        if (-not $deploymentExists) {
           Write-Host "Streamlit deployment not found. Creating it..."
-          kubectl create deployment streamlit --image=$IMAGE_NAME
-          kubectl expose deployment streamlit --type=LoadBalancer --port=8501 --target-port=8501
+          kubectl create deployment streamlit --image=$IMAGE_NAME | Out-Null
+          kubectl expose deployment streamlit --type=LoadBalancer --port=8501 --target-port=8501 | Out-Null
         } else {
           Write-Host "Updating existing Streamlit deployment..."
-          kubectl set image deployment/streamlit streamlit-app=$IMAGE_NAME
+          kubectl set image deployment/streamlit streamlit=$IMAGE_NAME --record
         }
-
+    
+        # Wait for rollout to finish
         kubectl rollout status deployment/streamlit
