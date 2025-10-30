@@ -1,0 +1,11 @@
+﻿{
+  "agentId": 21,
+  "agentName": "11LAPFKR29Y3",
+  "poolId": 1,
+  "poolName": "Default",
+  "serverUrl": "https://pipelinesghubeus5.actions.githubusercontent.com/FZkGSyzKSMJJK6Dlb4NOCZvPOg0sIeD4nxbYpnY3qaGs2ALiE4/",
+  "gitHubUrl": "https://github.com/miguelmartinez95/house-price-predictor",
+  "workFolder": "_work",
+  "useV2Flow": true,
+  "serverUrlV2": "https://broker.actions.githubusercontent.com/"
+}
