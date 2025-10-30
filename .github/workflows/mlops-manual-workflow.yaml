@@ -184,6 +184,37 @@ jobs:
         docker push docker.io/${{ vars.DOCKERHUB_USERNAME }}/house-price-model:$COMMIT_HASH
         docker push docker.io/${{ vars.DOCKERHUB_USERNAME }}/house-price-model:latest
 
+    - name: Set up kubectl 
+      uses: azure/setup-kubectl@v4
+      with:
+        version: latest
+
+    - name: Configure kubectl
+      run: |
+        mkdir -p $HOME/.kube 
+        echo "${{ secrets.KUBECONFIG_CONTENT }}" > $HOME/.kube/config
+
+    - name: Deploy new image to Kubernetes
+      run: |
+        COMMIT_HASH=$(echo ${{ github.sha }} | cut -c1-7)
+        IMAGE="docker.io/${{ vars.DOCKERHUB_USERNAME }}/house-price-model:$COMMIT_HASH"
+
+        echo "Updating house-predictor deployment to $IMAGE"
+        kubectl set image deployment/house-predictor house-predictor=$IMAGE --record
+
+        echo "Waiting for rollout...."
+        kubectl rollout status deployment/house-predictor
+
+    - name: Trigger Streamlit Deploy workflow
+      uses: peter-evans/workflow-dispatch@v2
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        repository: ${{ github.repository }}
+        workflow: "Build, Push, and Deploy Streamlit App"
+        ref: main
+
+
+
 
 
 

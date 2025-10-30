@@ -1,10 +1,10 @@
-name: Build and Push Streamlit App
+name: Build, Push, and Deploy Streamlit App
 
 on:
   workflow_dispatch:   # Manual trigger
-  push:
-    branches:
-      - main 
+#  push:
+#    branches:
+#      - main 
 
 jobs:
   build-and-push:
@@ -35,3 +35,20 @@ jobs:
         echo "Pushing to DockerHub..."
         docker push $IMAGE_NAME:$COMMIT_HASH
         docker push $IMAGE_NAME:latest
+
+    - name: Configure kubectl 
+      run: |
+        mkdir -p $HOME/.kube
+        echo "${{ secrets.KUBECONFIG_CONTENT }}" > $HOME/.kube/config
+
+
+    - name: Verify cluster access
+      run: |
+        kubectl get nodes
+        kubectl get ns 
+
+    - name: Deploy new Streamlit image
+      run: |
+        IMAGE_NAME=docker.io/${{ vars.DOCKERHUB_USERNAME }}/streamlit-app:latest
+        kubectl set image deployment/streamlit streamlit-app=$IMAGE_NAME --record
+        kubectl rollout status deployment/streamlit
