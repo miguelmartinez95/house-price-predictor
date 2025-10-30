@@ -221,19 +221,19 @@ jobs:
         $COMMIT_HASH = $env:GITHUB_SHA.Substring(0,7)
         $IMAGE = "docker.io/${{ vars.DOCKERHUB_USERNAME }}/house-price-model:$COMMIT_HASH"
         Write-Host "Deploying image: $IMAGE"
-        
-        # Check if deployment exists safely
-        $deploymentExists = kubectl get deployment house-predictor -o name 2>$null
-        if (-not $deploymentExists) {
+    
+        # Check if deployment exists using --ignore-not-found
+        $deployment = kubectl get deployment house-predictor --ignore-not-found
+    
+        if (-not $deployment) {
             Write-Host "Deployment not found — creating a new one..."
-            kubectl create deployment house-predictor --image=$IMAGE | Out-Null
-            kubectl expose deployment house-predictor --type=LoadBalancer --port=8000 --target-port=8000 | Out-Null
+            kubectl create deployment house-predictor --image=$IMAGE
+            kubectl expose deployment house-predictor --type=LoadBalancer --port=8000 --target-port=8000
         } else {
-            Write-Host "Deployment found — updating the image..."
+            Write-Host "Deployment exists — updating image..."
             kubectl set image deployment/house-predictor house-predictor=$IMAGE
         }
-        
-        # Wait for rollout to complete
+    
         Write-Host "Waiting for deployment rollout..."
         kubectl rollout status deployment/house-predictor
 
