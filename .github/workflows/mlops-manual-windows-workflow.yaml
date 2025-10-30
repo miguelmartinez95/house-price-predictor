@@ -101,7 +101,7 @@ jobs:
           docker pull ghcr.io/mlflow/mlflow:latest
           docker run -d `
             -p 5555:5000 `
-            --name mlflow-server `
+            --name mlflow-server2 `
             ghcr.io/mlflow/mlflow:latest `
             mlflow server `
               --host 0.0.0.0 `
@@ -139,7 +139,7 @@ jobs:
     - name: Clean up MLFlow
       shell: powershell
       run: |
-        docker stop mlflow-server; docker rm mlflow-server
+        docker stop mlflow-server2; docker rm mlflow-server2
 
   
   build-and-publish:
