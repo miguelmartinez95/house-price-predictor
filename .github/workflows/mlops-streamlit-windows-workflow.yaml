@@ -30,7 +30,7 @@ jobs:
 
     
     - name: Build and Push Docker image
-      shell: pwsh
+      shell: powershell
       run: |
         $COMMIT_HASH = $env:GITHUB_SHA.Substring(0,7)
         $IMAGE_NAME = "docker.io/${{ vars.DOCKERHUB_USERNAME }}/streamlit-app"
@@ -43,7 +43,7 @@ jobs:
         docker push $IMAGE_NAME:latest
 
     - name: Configure kubectl 
-      shell: pwsh
+      shell: powershell
       run: |
         $KubePath = "$HOME\.kube"
         New-Item -ItemType Directory -Force -Path $KubePath
@@ -57,7 +57,7 @@ jobs:
 
     
     - name: Deploy new Streamlit image
-      shell: pwsh
+      shell: powershell
       run: |
         $IMAGE_NAME = "docker.io/${{ vars.DOCKERHUB_USERNAME }}/streamlit-app:latest"
         Write-Host "Updating Streamlit deployment to $IMAGE_NAME"

@@ -45,14 +45,14 @@ jobs:
         pip install -r requirements.txt
 
     - name: Process Data 
-      shell: pwsh
+      shell: powershell
       run: |
         python src\data\run_processing.py `
         --input data\raw\house_data.csv `
         --output data\processed\cleaned_house_data.csv
 
     - name: Engineer Features 
-      shell: pwsh
+      shell: powershell
       run: |
         python src\features\engineer.py `
         --input data\processed\cleaned_house_data.csv `
@@ -96,7 +96,7 @@ jobs:
         path: data/processed/
 
     - name: Set up MLFlow
-      shell: pwsh
+      shell: powershell
       run: |
           docker pull ghcr.io/mlflow/mlflow:latest
           docker run -d `
@@ -109,7 +109,7 @@ jobs:
               --default-artifact-root C:\Users\mmcomesana\Cursos\Udemy\MLOps\house-price-predictor\actions-runner\mlruns
 
     - name: Wait for MLFlow to start
-      shell: pwsh
+      shell: powershell
       run: |
         for ($i=0; $i -lt 10; $i++) {
           try {
@@ -121,7 +121,7 @@ jobs:
         }
 
     - name: Train Model 
-      shell: pwsh
+      shell: powershell
       run: |
         New-Item -ItemType Directory -Force -Path models
         python src\models\train_model.py `
@@ -137,7 +137,7 @@ jobs:
         path: models/
 
     - name: Clean up MLFlow
-      shell: pwsh
+      shell: powershell
       run: |
         docker stop mlflow-server; docker rm mlflow-server
 
@@ -166,7 +166,7 @@ jobs:
       uses: docker/setup-buildx-action@v3
 
     - name: Build and test Docker image
-      shell: pwsh
+      shell: powershell
       run: |
         $COMMIT_HASH = $env:GITHUB_SHA.Substring(0,7)
         $IMAGE = "docker.io/${{ vars.DOCKERHUB_USERNAME }}/house-price-model:$COMMIT_HASH"
@@ -183,7 +183,7 @@ jobs:
         docker logs test-api
 
     - name: Clean up Test Container
-      shell: pwsh
+      shell: powershell
       run: |
         docker stop test-api; docker rm test-api
 
@@ -195,7 +195,7 @@ jobs:
         password: ${{secrets.DOCKERHUB_TOKEN}}
 
     - name: Push Docker image to DockerHub 
-      shell: pwsh
+      shell: powershell
       run: |
         $COMMIT_HASH = $env:GITHUB_SHA.Substring(0,7)
         $IMAGE = "docker.io/${{ vars.DOCKERHUB_USERNAME }}/house-price-model:$COMMIT_HASH"
@@ -209,14 +209,14 @@ jobs:
         version: latest
 
     - name: Configure kubectl
-      shell: pwsh
+      shell: powershell
       run: |
         $KubePath = "$HOME\.kube"
         New-Item -ItemType Directory -Force -Path $KubePath
         Set-Content -Path "$KubePath\config" -Value "${{ secrets.KUBECONFIG_CONTENT }}"
 
     - name: Deploy new image to Kubernetes
-      shell: pwsh
+      shell: powershell
       run: |
         $COMMIT_HASH = $env:GITHUB_SHA.Substring(0,7)
         $IMAGE = "docker.io/${{ vars.DOCKERHUB_USERNAME }}/house-price-model:$COMMIT_HASH"
