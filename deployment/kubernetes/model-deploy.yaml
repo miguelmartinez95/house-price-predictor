@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: house-predictor
+  name: house-predictor
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: house-predictor
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: house-predictor
+    spec:
+      containers:
+      - image: miguelmartinez1995/house-price-model:latest
+        name: house-price-model
+        ports:
+        - containerPort: 8000
+        resources: {}
+status: {}
