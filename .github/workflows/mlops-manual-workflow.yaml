@@ -45,12 +45,14 @@ jobs:
         pip install -r requirements.txt
 
     - name: Process Data 
+      shell: bash
       run: |
         python src/data/run_processing.py \
         --input data/raw/house_data.csv \
         --output data/processed/cleaned_house_data.csv
 
     - name: Engineer Features 
+      shell: bash
       run: |
         python src/features/engineer.py \
         --input data/processed/cleaned_house_data.csv \
@@ -94,6 +96,7 @@ jobs:
         path: data/processed/
 
     - name: Set up MLFlow
+      shell: bash
       run: |
           docker pull ghcr.io/mlflow/mlflow:latest
           docker run -d \
@@ -111,7 +114,8 @@ jobs:
           curl -f http//localhost:5555/health || sleep 5;
         done 
 
-    - name: Train Model 
+    - name: Train Model
+      shell: bash
       run: |
         mkdir -p models
         python src/models/train_model.py \
