@@ -45,17 +45,19 @@ jobs:
         pip install -r requirements.txt
 
     - name: Process Data 
+      shell: pwsh
       run: |
-        python src/data/run_processing.py \
-        --input data/raw/house_data.csv \
-        --output data/processed/cleaned_house_data.csv
+        python src\data\run_processing.py `
+        --input data\raw\house_data.csv `
+        --output data\processed\cleaned_house_data.csv
 
     - name: Engineer Features 
+      shell: pwsh
       run: |
-        python src/features/engineer.py \
-        --input data/processed/cleaned_house_data.csv \
-        --output data/processed/featured_house_data.csv \
-        --preprocessor models/trained/preprocessor.pkl
+        python src\features\engineer.py `
+        --input data\processed\cleaned_house_data.csv `
+        --output data\processed\featured_house_data.csv `
+        --preprocessor models\trained\preprocessor.pkl
 
     - name: Upload Processed Data 
       uses: actions/upload-artifact@v4
@@ -94,30 +96,38 @@ jobs:
         path: data/processed/
 
     - name: Set up MLFlow
+      shell: pwsh
       run: |
           docker pull ghcr.io/mlflow/mlflow:latest
-          docker run -d \
-            -p 5555:5000 \
-            --name mlflow-server \
-            ghcr.io/mlflow/mlflow:latest \
-            mlflow server \
-              --host 0.0.0.0 \
-              --backend-store-uri sqlite:///mlflow.db \
-              --default-artifact-root /tmp/mlruns
+          docker run -d `
+            -p 5555:5000 `
+            --name mlflow-server `
+            ghcr.io/mlflow/mlflow:latest `
+            mlflow server `
+              --host 0.0.0.0 `
+              --backend-store-uri sqlite:///mlflow.db `
+              --default-artifact-root C:\Users\mmcomesana\Cursos\Udemy\MLOps\house-price-predictor\actions-runner\mlruns
 
     - name: Wait for MLFlow to start
+      shell: pwsh
       run: |
-        for i in {1..10}; do
-          curl -f http//localhost:5555/health || sleep 5;
-        done 
+        for ($i=0; $i -lt 10; $i++) {
+          try {
+            Invoke-WebRequest http://localhost:5555/health -UseBasicParsing -TimeoutSec 5
+            break
+          } catch {
+            Start-Sleep -Seconds 5
+          }
+        }
 
     - name: Train Model 
+      shell: pwsh
       run: |
-        mkdir -p models
-        python src/models/train_model.py \
-        --config configs/model_config.yaml \
-        --data data/processed/featured_house_data.csv \
-        --models-dir models \
+        New-Item -ItemType Directory -Force -Path models
+        python src\models\train_model.py `
+        --config configs\model_config.yaml `
+        --data data\processed\featured_house_data.csv `
+        --models-dir models `
         --mlflow-tracking-uri http://localhost:5555
 
     - name: Upload Trained Model 
@@ -127,9 +137,9 @@ jobs:
         path: models/
 
     - name: Clean up MLFlow
+      shell: pwsh
       run: |
-        docker stop mlflow-server || true
-        docker rm mlflow-server || true
+        docker stop mlflow-server; docker rm mlflow-server
 
   
   build-and-publish:
@@ -156,19 +166,26 @@ jobs:
       uses: docker/setup-buildx-action@v3
 
     - name: Build and test Docker image
+      shell: pwsh
       run: |
-        COMMIT_HASH=$(echo ${{ github.sha }} | cut -c1-7)
-        docker build -t docker.io/${{ vars.DOCKERHUB_USERNAME }}/house-price-model:$COMMIT_HASH -f Dockerfile .
-        docker run -d -p 8000:8000 --name test-api docker.io/${{ vars.DOCKERHUB_USERNAME }}/house-price-model:$COMMIT_HASH
-        for i in {1..10}; do
-          curl -f http//localhost:8000/health && break || sleep 5;
-        done
+        $COMMIT_HASH = $env:GITHUB_SHA.Substring(0,7)
+        $IMAGE = "docker.io/${{ vars.DOCKERHUB_USERNAME }}/house-price-model:$COMMIT_HASH"
+        docker build -t $IMAGE -f Dockerfile .
+        docker run -d -p 8000:8000 --name test-api $IMAGE
+        for ($i=0; $i -lt 10; $i++) {
+          try {
+            Invoke-WebRequest http://localhost:8000/health -UseBasicParsing -TimeoutSec 5
+            break
+          } catch {
+            Start-Sleep -Seconds 5
+          }
+        }
         docker logs test-api
 
     - name: Clean up Test Container
+      shell: pwsh
       run: |
-        docker stop test-api || true
-        docker rm test-api || true
+        docker stop test-api; docker rm test-api
 
     - name: Log in to Github Container Registry
       uses: docker/login-action@v3
@@ -178,11 +195,13 @@ jobs:
         password: ${{secrets.DOCKERHUB_TOKEN}}
 
     - name: Push Docker image to DockerHub 
+      shell: pwsh
       run: |
-        COMMIT_HASH=$(echo ${{ github.sha }} | cut -c1-7)
-        docker tag docker.io/${{ vars.DOCKERHUB_USERNAME }}/house-price-model:$COMMIT_HASH docker.io/${{ vars.DOCKERHUB_USERNAME }}/house-price-model:latest
-        docker push docker.io/${{ vars.DOCKERHUB_USERNAME }}/house-price-model:$COMMIT_HASH
-        docker push docker.io/${{ vars.DOCKERHUB_USERNAME }}/house-price-model:latest
+        $COMMIT_HASH = $env:GITHUB_SHA.Substring(0,7)
+        $IMAGE = "docker.io/${{ vars.DOCKERHUB_USERNAME }}/house-price-model:$COMMIT_HASH"
+        docker tag $IMAGE "docker.io/${{ vars.DOCKERHUB_USERNAME }}/house-price-model:latest"
+        docker push $IMAGE
+        docker push "docker.io/${{ vars.DOCKERHUB_USERNAME }}/house-price-model:latest"
 
     - name: Set up kubectl 
       uses: azure/setup-kubectl@v4
@@ -190,19 +209,19 @@ jobs:
         version: latest
 
     - name: Configure kubectl
+      shell: pwsh
       run: |
-        mkdir -p $HOME/.kube 
-        echo "${{ secrets.KUBECONFIG_CONTENT }}" > $HOME/.kube/config
+        $KubePath = "$HOME\.kube"
+        New-Item -ItemType Directory -Force -Path $KubePath
+        Set-Content -Path "$KubePath\config" -Value "${{ secrets.KUBECONFIG_CONTENT }}"
 
     - name: Deploy new image to Kubernetes
+      shell: pwsh
       run: |
-        COMMIT_HASH=$(echo ${{ github.sha }} | cut -c1-7)
-        IMAGE="docker.io/${{ vars.DOCKERHUB_USERNAME }}/house-price-model:$COMMIT_HASH"
-
-        echo "Updating house-predictor deployment to $IMAGE"
-        kubectl set image deployment/house-predictor house-predictor=$IMAGE --record
-
-        echo "Waiting for rollout...."
+        $COMMIT_HASH = $env:GITHUB_SHA.Substring(0,7)
+        $IMAGE = "docker.io/${{ vars.DOCKERHUB_USERNAME }}/house-price-model:$COMMIT_HASH"
+        Write-Host "Updating house-predictor deployment to $IMAGE"
+        kubectl set image deployment/house-predictor house-predictor=$IMAGE
         kubectl rollout status deployment/house-predictor
 
     - name: Trigger Streamlit workflow
