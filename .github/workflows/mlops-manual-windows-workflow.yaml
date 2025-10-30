@@ -220,8 +220,17 @@ jobs:
       run: |
         $COMMIT_HASH = $env:GITHUB_SHA.Substring(0,7)
         $IMAGE = "docker.io/${{ vars.DOCKERHUB_USERNAME }}/house-price-model:$COMMIT_HASH"
-        Write-Host "Updating house-predictor deployment to $IMAGE"
-        kubectl set image deployment/house-predictor house-predictor=$IMAGE
+        
+        # Check if the deployment exists
+        if (-not (kubectl get deployment house-predictor -o name 2>$null)) {
+          Write-Host "Deployment not found. Creating new deployment..."
+          kubectl create deployment house-predictor --image=$IMAGE
+          kubectl expose deployment house-predictor --type=LoadBalancer --port=8000 --target-port=8000
+        } else {
+          Write-Host "Updating existing deployment..."
+          kubectl set image deployment/house-predictor house-predictor=$IMAGE
+        }
+        
         kubectl rollout status deployment/house-predictor
 
     - name: Trigger Streamlit workflow
