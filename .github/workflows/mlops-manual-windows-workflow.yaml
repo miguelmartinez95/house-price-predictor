@@ -95,30 +95,19 @@ jobs:
         name: processed-data
         path: data/processed/
 
-    - name: Set up MLFlow
+    - name: Deploy Persistent MLflow Server
       shell: powershell
       run: |
-          docker pull ghcr.io/mlflow/mlflow:latest
-          docker run -d `
-            -p 5555:5000 `
-            --name mlflow-server2 `
-            ghcr.io/mlflow/mlflow:latest `
-            mlflow server `
-              --host 0.0.0.0 `
-              --backend-store-uri sqlite:///mlflow.db `
-              --default-artifact-root file:///mlruns
-
-    - name: Wait for MLFlow to start
-      shell: powershell
-      run: |
-        for ($i=0; $i -lt 10; $i++) {
-          try {
-            Invoke-WebRequest http://localhost:5555/health -UseBasicParsing -TimeoutSec 5
-            break
-          } catch {
-            Start-Sleep -Seconds 5
-          }
+        # Create MLflow deployment if not exists
+        $mlflow = kubectl get deployment mlflow --ignore-not-found
+        if (-not $mlflow) {
+            kubectl create deployment mlflow --image=ghcr.io/mlflow/mlflow:latest
         }
+        kubectl expose deployment mlflow --type=NodePort --port=5000 --target-port=5000 --ignore-existing
+
+        # Print NodePort for MLflow
+        $mlflowPort = kubectl get svc mlflow -o jsonpath="{.spec.ports[0].nodePort}"
+        Write-Host "MLflow available at http://localhost:$mlflowPort"
 
     - name: Train Model 
       shell: powershell
@@ -128,7 +117,7 @@ jobs:
         --config configs\model_config.yaml `
         --data data\processed\featured_house_data.csv `
         --models-dir models `
-        --mlflow-tracking-uri http://localhost:5555
+        --mlflow-tracking-uri http://mlflow:5000
 
     - name: Upload Trained Model 
       uses: actions/upload-artifact@v4
@@ -216,27 +205,25 @@ jobs:
         Set-Content -Path "$KubePath\config" -Value "${{ secrets.KUBECONFIG_CONTENT }}"
         kubectl get nodes
 
-    - name: Deploy new image to Kubernetes
+    - name: Deploy FastAPI to k3d
       shell: powershell
       run: |
         $COMMIT_HASH = $env:GITHUB_SHA.Substring(0,7)
         $IMAGE = "docker.io/${{ vars.DOCKERHUB_USERNAME }}/house-price-model:$COMMIT_HASH"
-        Write-Host "Deploying image: $IMAGE"
-    
-        # Check if deployment exists using --ignore-not-found
+
+        # Deploy FastAPI
         $deployment = kubectl get deployment house-predictor --ignore-not-found
-    
         if (-not $deployment) {
-            Write-Host "Deployment not found — creating a new one..."
             kubectl create deployment house-predictor --image=$IMAGE
-            kubectl expose deployment house-predictor --type=LoadBalancer --port=8000 --target-port=8000
         } else {
-            Write-Host "Deployment exists — updating image..."
             kubectl set image deployment/house-predictor house-predictor=$IMAGE
         }
-    
-        Write-Host "Waiting for deployment rollout..."
-        kubectl rollout status deployment/house-predictor
+
+        kubectl expose deployment house-predictor --type=NodePort --port=8000 --target-port=8000 --ignore-existing
+
+        # Print FastAPI NodePort
+        $fastapiPort = kubectl get svc house-predictor -o jsonpath="{.spec.ports[0].nodePort}"
+        Write-Host "FastAPI available at http://localhost:$fastapiPort"
 
     - name: Trigger Streamlit workflow
       uses: peter-evans/repository-dispatch@v3

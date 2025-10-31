@@ -57,23 +57,28 @@ jobs:
         kubectl get ns 
 
     
-    - name: Deploy new Streamlit image
+    - name: Deploy Streamlit app
       shell: powershell
       run: |
         $IMAGE_NAME = "docker.io/${{ vars.DOCKERHUB_USERNAME }}/streamlit-app:latest"
         Write-Host "Deploying Streamlit app using image $IMAGE_NAME"
 
-        # Check if deployment exists safely
+        # Deploy or update deployment
         $deployment = kubectl get deployment streamlit --ignore-not-found
-
         if (-not $deployment) {
             Write-Host "Streamlit deployment not found — creating a new one..."
             kubectl create deployment streamlit --image=$IMAGE_NAME
-            kubectl expose deployment streamlit --type=LoadBalancer --port=8501 --target-port=8501
         } else {
             Write-Host "Streamlit deployment exists — updating image..."
             kubectl set image deployment/streamlit streamlit=$IMAGE_NAME
         }
 
-        Write-Host "Waiting for deployment rollout..."
+        # Expose Streamlit via NodePort
+        kubectl expose deployment streamlit --type=NodePort --port=8501 --target-port=8501 --ignore-existing
+
+        # Get NodePort and print URL
+        $streamlitPort = kubectl get svc streamlit -o jsonpath="{.spec.ports[0].nodePort}"
+        Write-Host "Streamlit available at http://localhost:$streamlitPort"
+
+        # Wait for rollout
         kubectl rollout status deployment/streamlit
