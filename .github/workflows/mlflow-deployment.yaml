@@ -17,22 +17,27 @@ spec:
         image: ghcr.io/mlflow/mlflow:latest
         ports:
         - containerPort: 5000
-        command: ["mlflow", "server"]
         args:
+          - "server"
           - "--host"
           - "0.0.0.0"
           - "--port"
           - "5000"
           - "--backend-store-uri"
-          - "sqlite:///mlflow.db"
+          - "sqlite:////mlflow/mlflow.db"   # Absolute path for SQLite
           - "--default-artifact-root"
           - "/mlflow/artifacts"
         volumeMounts:
         - name: mlflow-storage
-          mountPath: /mlflow/artifacts
+          mountPath: /mlflow
+        readinessProbe:
+          tcpSocket:
+            port: 5000
+          initialDelaySeconds: 5
+          periodSeconds: 10
       volumes:
       - name: mlflow-storage
-        emptyDir: {}
+        emptyDir: {}   # For testing; use persistent volume in production
 ---
 apiVersion: v1
 kind: Service
@@ -46,4 +51,4 @@ spec:
     - protocol: TCP
       port: 5000
       targetPort: 5000
-      nodePort: 32000  # change if needed
+      nodePort: 32000
