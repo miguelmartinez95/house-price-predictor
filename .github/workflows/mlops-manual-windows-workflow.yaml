@@ -104,14 +104,13 @@ jobs:
         # Wait until pod is ready
         kubectl wait --for=condition=available deployment/mlflow --timeout=300s
 
-        # Get the NodePort
-        $mlflowPort = kubectl get svc mlflow -o jsonpath="{.spec.ports[0].nodePort}"
-        Write-Host "MLflow available at http://localhost:$mlflowPort"
+        # Start port-forward in background
+        Start-Process powershell -ArgumentList "kubectl port-forward svc/mlflow 5000:5000" -NoNewWindow
 
-        # Wait for MLflow to respond to HTTP requests
+        # Wait for MLflow to respond
         $maxRetries = 20
         $waitSec = 5
-        $uri = "http://localhost:$mlflowPort"
+        $uri = "http://127.0.0.1:5000"
 
         for ($i=0; $i -lt $maxRetries; $i++) {
             try {
@@ -123,7 +122,7 @@ jobs:
                 Start-Sleep -Seconds $waitSec
             }
         }
-        
+
     - name: Train Model 
       shell: powershell
       run: |
@@ -133,7 +132,7 @@ jobs:
         --config configs\model_config.yaml `
         --data data\processed\featured_house_data.csv `
         --models-dir models `
-        --mlflow-tracking-uri "http://localhost:$mlflowPort"
+        --mlflow-tracking-uri "http://127.0.0.1:5000"
 
     - name: Upload Trained Model 
       uses: actions/upload-artifact@v4
