@@ -200,10 +200,14 @@ jobs:
         name: trained-model
         path: models/
 
-    - name: Clean up MLFlow
+    - name: Clean up MLflow resources
       shell: powershell
       run: |
-        docker stop mlflow-server2; docker rm mlflow-server2
+        Write-Host "Cleaning up MLflow Kubernetes resources..."
+        kubectl delete deployment mlflow --ignore-not-found
+        kubectl delete svc mlflow --ignore-not-found
+        # DO NOT delete the PVC — this keeps experiment history persistent
+        kubectl get pvc mlflow-pvc
   
   build-and-publish:
     needs: model-training
