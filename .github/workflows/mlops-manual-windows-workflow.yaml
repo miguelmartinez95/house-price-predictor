@@ -110,6 +110,10 @@ jobs:
             kubectl expose deployment mlflow --type=NodePort --port=5000 --target-port=5000
         }
 
+        # Wait for MLflow deployment to be ready
+        kubectl rollout status deployment/mlflow --timeout=120s
+
+
         # Get the NodePort
         $mlflowPort = kubectl get svc mlflow -o jsonpath="{.spec.ports[0].nodePort}"
         Write-Host "MLflow available at http://localhost:$mlflowPort"
@@ -118,6 +122,23 @@ jobs:
       shell: powershell
       run: |
         New-Item -ItemType Directory -Force -Path models
+
+        $maxRetries = 10
+        $waitSec = 5
+        $uri = "http://localhost:$mlflowPort"
+        
+        for ($i=0; $i -lt $maxRetries; $i++) {
+            try {
+                Invoke-WebRequest "$uri/health" -UseBasicParsing -TimeoutSec 5
+                Write-Host "MLflow is ready at $uri"
+                break
+            } catch {
+                Write-Host "Waiting for MLflow to start... ($i)"
+                Start-Sleep -Seconds $waitSec
+            }
+        }
+
+
         python src\models\train_model.py `
         --config configs\model_config.yaml `
         --data data\processed\featured_house_data.csv `
