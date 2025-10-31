@@ -109,7 +109,7 @@ jobs:
         if (-not $mlflowSvc) {
             kubectl expose deployment mlflow --type=NodePort --port=5000 --target-port=5000
         }
-        
+
         # Get the NodePort
         $mlflowPort = kubectl get svc mlflow -o jsonpath="{.spec.ports[0].nodePort}"
         Write-Host "MLflow available at http://localhost:$mlflowPort"
@@ -122,7 +122,7 @@ jobs:
         --config configs\model_config.yaml `
         --data data\processed\featured_house_data.csv `
         --models-dir models `
-        --mlflow-tracking-uri http://mlflow:5000
+        --mlflow-tracking-uri "http://localhost:$mlflowPort"
 
     - name: Upload Trained Model 
       uses: actions/upload-artifact@v4
