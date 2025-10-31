@@ -135,7 +135,7 @@ jobs:
       shell: powershell
       run: |
         Write-Host "Waiting for MLflow service to respond on /health..."
-        Start-Process -FilePath "kubectl" -ArgumentList "port-forward svc/mlflow 5000:5000" -NoNewWindow -PassThru | Out-Variable PF
+        $PF = Start-Process -FilePath "kubectl" -ArgumentList "port-forward svc/mlflow 5000:5000" -NoNewWindow -PassThru
         Start-Sleep -Seconds 5
         $maxRetries = 30
         for ($i = 1; $i -le $maxRetries; $i++) {
