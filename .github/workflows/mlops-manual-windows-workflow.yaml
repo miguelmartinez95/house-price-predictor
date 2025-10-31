@@ -111,8 +111,7 @@ jobs:
         }
 
         # Wait for MLflow deployment to be ready
-        kubectl rollout status deployment/mlflow --timeout=120s
-
+        kubectl wait deployment/mlflow --for=condition=available --timeout=300s
 
         # Get the NodePort
         $mlflowPort = kubectl get svc mlflow -o jsonpath="{.spec.ports[0].nodePort}"
@@ -126,7 +125,7 @@ jobs:
         $maxRetries = 10
         $waitSec = 5
         $uri = "http://localhost:$mlflowPort"
-        
+
         for ($i=0; $i -lt $maxRetries; $i++) {
             try {
                 Invoke-WebRequest "$uri/health" -UseBasicParsing -TimeoutSec 5
