@@ -132,27 +132,31 @@ jobs:
         kubectl logs -l app=mlflow --tail=20
 
     - name: Wait for MLflow to be ready
-      shell: bash
+      shell: powershell
       run: |
-        echo "Waiting for MLflow service to respond on /health..."
-        kubectl port-forward svc/mlflow 5000:5000 &
-        PF_PID=$!
-        for i in {1..30}; do
-          if curl -s http://127.0.0.1:5000/health | grep -q "OK"; then
-            echo "✅ MLflow is ready!"
-            kill $PF_PID || true
-            break
-          else
-            echo "⏳ Still waiting for MLflow... ($i)"
-            sleep 5
-          fi
-        done
-        if ! curl -s http://127.0.0.1:5000/health | grep -q "OK"; then
-          echo "❌ MLflow did not start in time"
+        Write-Host "Waiting for MLflow service to respond on /health..."
+        Start-Process -FilePath "kubectl" -ArgumentList "port-forward svc/mlflow 5000:5000" -NoNewWindow -PassThru | Out-Variable PF
+        Start-Sleep -Seconds 5
+        $maxRetries = 30
+        for ($i = 1; $i -le $maxRetries; $i++) {
+          try {
+            $resp = Invoke-WebRequest -Uri "http://127.0.0.1:5000/health" -UseBasicParsing -TimeoutSec 5
+            if ($resp.StatusCode -eq 200 -and $resp.Content -match "OK") {
+              Write-Host "✅ MLflow is ready!"
+              Stop-Process -Id $PF.Id -Force
+              break
+            }
+          } catch {
+            Write-Host "⏳ Still waiting for MLflow... ($i)"
+            Start-Sleep -Seconds 5
+          }
+        }
+        if ($i -eq $maxRetries) {
+          Write-Host "❌ MLflow did not start in time"
           kubectl logs -l app=mlflow
-          kill $PF_PID || true
+          Stop-Process -Id $PF.Id -Force
           exit 1
-        fi
+        }
 
     - name: Train Model 
       shell: powershell
