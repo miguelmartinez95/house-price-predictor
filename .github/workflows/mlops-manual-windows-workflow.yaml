@@ -131,7 +131,7 @@ jobs:
         Write-Host "Fetching MLflow logs to verify server startup..."
         kubectl logs -l app=mlflow --tail=20
 
-        - name: Wait for MLflow to be ready
+    - name: Wait for MLflow to be ready
       shell: bash
       run: |
         echo "Waiting for MLflow service to respond on /health..."
