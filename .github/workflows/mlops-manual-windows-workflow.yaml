@@ -95,6 +95,21 @@ jobs:
         name: processed-data
         path: data/processed/
 
+    - name: Deploy MLflow Persistent Storage
+      shell: powershell
+      run: |
+        kubectl apply -f .github/workflows/mlflow-pv.yaml
+    
+        # Wait for PVC to be Bound
+        $maxRetries = 20
+        $waitSec = 5
+        for ($i=0; $i -lt $maxRetries; $i++) {
+            $pvcStatus = kubectl get pvc mlflow-pvc -o jsonpath="{.status.phase}"
+            Write-Host "PVC status: $pvcStatus"
+            if ($pvcStatus -eq "Bound") { break }
+            Start-Sleep -Seconds $waitSec
+        }
+
     - name: Deploy Persistent MLflow Server
       shell: powershell
       run: |
@@ -109,7 +124,7 @@ jobs:
       run: |
         # Start port-forward in background
         $pf = Start-Process -NoNewWindow -PassThru -FilePath kubectl -ArgumentList "port-forward svc/mlflow 5000:5000"
-        
+
         # Wait for MLflow to be ready
         $uri = "http://127.0.0.1:5000/health"
         $maxRetries = 20
@@ -126,16 +141,16 @@ jobs:
                 Start-Sleep -Seconds $waitSec
             }
         }
-    
+
         # Train the model
         New-Item -ItemType Directory -Force -Path models
-    
+
         python src\models\train_model.py `
             --config configs\model_config.yaml `
             --data data\processed\featured_house_data.csv `
             --models-dir models `
             --mlflow-tracking-uri "http://127.0.0.1:5000"
-    
+
         # Kill port-forward
         Stop-Process -Id $pf.Id -Force
 
