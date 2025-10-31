@@ -199,21 +199,6 @@ jobs:
       with:
         name: trained-model
         path: models/
-
-    - name: Expose MLflow service
-      shell: powershell
-      run: |
-        Write-Host "Creating ClusterIP service for MLflow..."
-        kubectl expose deployment mlflow --type=ClusterIP --name=mlflow --port=5000 --target-port=5000 --ignore-existing
-
-    - name: Clean up MLflow resources
-      shell: powershell
-      run: |
-        Write-Host "Cleaning up MLflow Kubernetes resources..."
-        kubectl delete deployment mlflow --ignore-not-found
-        kubectl delete svc mlflow --ignore-not-found
-        # DO NOT delete the PVC — this keeps experiment history persistent
-        kubectl get pvc mlflow-pvc
   
   build-and-publish:
     needs: model-training
@@ -321,7 +306,6 @@ jobs:
       shell: powershell
       run: |
         Write-Host "Port-forwarding MLflow, FastAPI, and Streamlit..."
-        Start-Process kubectl -ArgumentList "port-forward svc/mlflow 5000:5000" -NoNewWindow -PassThru
         Start-Process kubectl -ArgumentList "port-forward svc/house-predictor 8000:8000" -NoNewWindow -PassThru
         Start-Process kubectl -ArgumentList "port-forward svc/streamlit 8501:8501" -NoNewWindow -PassThru
         Write-Host "✅ Services are now accessible on your local machine"
