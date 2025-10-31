@@ -208,10 +208,12 @@ jobs:
       with:
         version: latest
 
-    - name: Configure kubectl (use local Docker Desktop kubeconfig)
+    - name: Configure kubectl
       shell: powershell
       run: |
-        $env:KUBECONFIG="$HOME\.kube\config"
+        $KubePath = "$HOME\.kube"
+        New-Item -ItemType Directory -Force -Path $KubePath
+        Set-Content -Path "$KubePath\config" -Value "${{ secrets.KUBECONFIG_CONTENT }}"
         kubectl get nodes
 
     - name: Deploy new image to Kubernetes

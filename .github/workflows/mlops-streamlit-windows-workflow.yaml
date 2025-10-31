@@ -42,12 +42,13 @@ jobs:
         docker push ${IMAGE_NAME}:${COMMIT_HASH}
         docker push ${IMAGE_NAME}:latest
 
-    - name: Configure kubectl 
+    - name: Configure kubectl
       shell: powershell
       run: |
         $KubePath = "$HOME\.kube"
         New-Item -ItemType Directory -Force -Path $KubePath
         Set-Content -Path "$KubePath\config" -Value "${{ secrets.KUBECONFIG_CONTENT }}"
+        kubectl get nodes
 
 
     - name: Verify cluster access
