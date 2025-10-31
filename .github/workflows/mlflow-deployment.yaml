@@ -12,11 +12,24 @@ spec:
       labels:
         app: mlflow
     spec:
+      # 👇 Add initContainer to create directories and fix permissions
+      initContainers:
+      - name: init-mlflow-storage
+        image: busybox
+        command:
+          - sh
+          - -c
+          - |
+            mkdir -p /mlflow/db /mlflow/artifacts && chmod -R 777 /mlflow
+        volumeMounts:
+          - name: mlflow-pvc
+            mountPath: /mlflow
+
       containers:
       - name: mlflow
         image: ghcr.io/mlflow/mlflow:latest
         ports:
-        - containerPort: 5000
+          - containerPort: 5000
         command: ["python", "-m", "mlflow", "server"]
         args:
           - "--host"
@@ -24,12 +37,13 @@ spec:
           - "--port"
           - "5000"
           - "--backend-store-uri"
-          - "sqlite:////mlflow/db/mlflow.db"   # Fixed path for SQLite
+          - "sqlite:////mlflow/db/mlflow.db"
           - "--default-artifact-root"
           - "/mlflow/artifacts"
         volumeMounts:
-        - name: mlflow-pvc
-          mountPath: /mlflow
+          - name: mlflow-pvc
+            mountPath: /mlflow
+
       volumes:
       - name: mlflow-pvc
         persistentVolumeClaim:
