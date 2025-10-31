@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mlflow
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mlflow
+  template:
+    metadata:
+      labels:
+        app: mlflow
+    spec:
+      containers:
+      - name: mlflow
+        image: ghcr.io/mlflow/mlflow:latest
+        command: ["mlflow", "server"]
+        args:
+          - "--host=0.0.0.0"
+          - "--port=5000"
+          - "--backend-store-uri=sqlite:///mlflow.db"
+          - "--default-artifact-root=/mlruns"
+        ports:
+          - containerPort: 5000
+        volumeMounts:
+          - name: mlflow-db
+            mountPath: /mlflow.db
+          - name: mlflow-artifacts
+            mountPath: /mlruns
+      volumes:
+        - name: mlflow-db
+          hostPath:
+            path: /tmp/mlflow/mlflow.db
+            type: FileOrCreate
+        - name: mlflow-artifacts
+          hostPath:
+            path: /tmp/mlflow/mlruns
+            type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mlflow
+spec:
+  type: NodePort
+  selector:
+    app: mlflow
+  ports:
+    - port: 5000
+      targetPort: 5000

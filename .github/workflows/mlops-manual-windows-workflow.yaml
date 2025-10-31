@@ -110,10 +110,8 @@ jobs:
             kubectl expose deployment mlflow --type=NodePort --port=5000 --target-port=5000
         }
 
-        # Wait for MLflow deployment to be ready
-        kubectl wait deployment/mlflow --for=condition=available --timeout=300s
-
-        # Get the NodePort
+        kubectl apply -f mlflow-deployment.yaml
+        kubectl rollout status deployment/mlflow --timeout=300s
         $mlflowPort = kubectl get svc mlflow -o jsonpath="{.spec.ports[0].nodePort}"
         Write-Host "MLflow available at http://localhost:$mlflowPort"
 
