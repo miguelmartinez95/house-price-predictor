@@ -311,6 +311,15 @@ jobs:
         event-type: deploy-streamlit
         client-payload: '{"ref": "main"}'
 
+    - name: Port-forward services to local machine
+      shell: powershell
+      run: |
+        Write-Host "Port-forwarding MLflow, FastAPI, and Streamlit..."
+        Start-Process kubectl -ArgumentList "port-forward svc/mlflow 5000:5000" -NoNewWindow -PassThru
+        Start-Process kubectl -ArgumentList "port-forward svc/house-predictor 8000:8000" -NoNewWindow -PassThru
+        Start-Process kubectl -ArgumentList "port-forward svc/streamlit 8501:8501" -NoNewWindow -PassThru
+        Write-Host "✅ Services are now accessible on your local machine"
+
 
 
 

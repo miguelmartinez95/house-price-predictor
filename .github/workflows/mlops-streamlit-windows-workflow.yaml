@@ -82,3 +82,9 @@ jobs:
 
         # Wait for rollout
         kubectl rollout status deployment/streamlit
+
+    - name: Port-forward Streamlit to local machine
+      shell: powershell
+      run: |
+        Start-Process kubectl -ArgumentList "port-forward svc/streamlit 8501:8501" -NoNewWindow -PassThru
+        Write-Host "✅ Streamlit port-forwarded to http://127.0.0.1:8501"
