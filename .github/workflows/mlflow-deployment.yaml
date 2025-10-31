@@ -17,27 +17,22 @@ spec:
         image: ghcr.io/mlflow/mlflow:latest
         ports:
         - containerPort: 5000
+        command: ["python", "-m", "mlflow", "server"]
         args:
-          - "server"
           - "--host"
           - "0.0.0.0"
           - "--port"
           - "5000"
           - "--backend-store-uri"
-          - "sqlite:////mlflow/mlflow.db"   # Absolute path for SQLite
+          - "sqlite:///mlflow.db"
           - "--default-artifact-root"
           - "/mlflow/artifacts"
         volumeMounts:
         - name: mlflow-storage
-          mountPath: /mlflow
-        readinessProbe:
-          tcpSocket:
-            port: 5000
-          initialDelaySeconds: 5
-          periodSeconds: 10
+          mountPath: /mlflow/artifacts
       volumes:
       - name: mlflow-storage
-        emptyDir: {}   # For testing; use persistent volume in production
+        emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
