@@ -131,13 +131,36 @@ jobs:
         Write-Host "Fetching MLflow logs to verify server startup..."
         kubectl logs -l app=mlflow --tail=20
 
+        - name: Wait for MLflow to be ready
+      shell: bash
+      run: |
+        echo "Waiting for MLflow service to respond on /health..."
+        kubectl port-forward svc/mlflow 5000:5000 &
+        PF_PID=$!
+        for i in {1..30}; do
+          if curl -s http://127.0.0.1:5000/health | grep -q "OK"; then
+            echo "✅ MLflow is ready!"
+            kill $PF_PID || true
+            break
+          else
+            echo "⏳ Still waiting for MLflow... ($i)"
+            sleep 5
+          fi
+        done
+        if ! curl -s http://127.0.0.1:5000/health | grep -q "OK"; then
+          echo "❌ MLflow did not start in time"
+          kubectl logs -l app=mlflow
+          kill $PF_PID || true
+          exit 1
+        fi
+
     - name: Train Model 
       shell: powershell
       run: |
         # Start port-forward in background
         $pf = Start-Process -NoNewWindow -PassThru -FilePath kubectl -ArgumentList "port-forward svc/mlflow 5000:5000"
         Start-Sleep -Seconds 5
-    
+
         # Check if port-forward is working and MLflow responds
         $uri = "http://127.0.0.1:5000"
         $maxRetries = 30
