@@ -98,29 +98,18 @@ jobs:
     - name: Deploy Persistent MLflow Server
       shell: powershell
       run: |
-        # Create MLflow deployment if not exists
-        $mlflow = kubectl get deployment mlflow --ignore-not-found
-        if (-not $mlflow) {
-            kubectl create deployment mlflow --image=ghcr.io/mlflow/mlflow:latest
-        }
-        
-        # Check if service exists, create NodePort service only if not exists
-        $mlflowSvc = kubectl get svc mlflow --ignore-not-found
-        if (-not $mlflowSvc) {
-            kubectl expose deployment mlflow --type=NodePort --port=5000 --target-port=5000
-        }
-
+        # Apply deployment yaml (create or update)
         kubectl apply -f .github/workflows/mlflow-deployment.yaml
-        kubectl rollout status deployment/mlflow --timeout=300s
+
+        # Wait until pod is ready
+        kubectl wait --for=condition=available deployment/mlflow --timeout=300s
+
+        # Get the NodePort
         $mlflowPort = kubectl get svc mlflow -o jsonpath="{.spec.ports[0].nodePort}"
         Write-Host "MLflow available at http://localhost:$mlflowPort"
 
-    - name: Train Model 
-      shell: powershell
-      run: |
-        New-Item -ItemType Directory -Force -Path models
-
-        $maxRetries = 10
+        # Wait for MLflow to respond to HTTP requests
+        $maxRetries = 20
         $waitSec = 5
         $uri = "http://localhost:$mlflowPort"
 
@@ -134,7 +123,11 @@ jobs:
                 Start-Sleep -Seconds $waitSec
             }
         }
-
+        
+    - name: Train Model 
+      shell: powershell
+      run: |
+        New-Item -ItemType Directory -Force -Path models
 
         python src\models\train_model.py `
         --config configs\model_config.yaml `

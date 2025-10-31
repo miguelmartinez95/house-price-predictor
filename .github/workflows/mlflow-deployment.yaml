@@ -15,28 +15,24 @@ spec:
       containers:
       - name: mlflow
         image: ghcr.io/mlflow/mlflow:latest
+        ports:
+        - containerPort: 5000
         command: ["mlflow", "server"]
         args:
-          - "--host=0.0.0.0"
-          - "--port=5000"
-          - "--backend-store-uri=sqlite:///mlflow.db"
-          - "--default-artifact-root=/mlruns"
-        ports:
-          - containerPort: 5000
+          - "--host"
+          - "0.0.0.0"
+          - "--port"
+          - "5000"
+          - "--backend-store-uri"
+          - "sqlite:///mlflow.db"
+          - "--default-artifact-root"
+          - "/mlflow/artifacts"
         volumeMounts:
-          - name: mlflow-db
-            mountPath: /mlflow.db
-          - name: mlflow-artifacts
-            mountPath: /mlruns
+        - name: mlflow-storage
+          mountPath: /mlflow/artifacts
       volumes:
-        - name: mlflow-db
-          hostPath:
-            path: /tmp/mlflow/mlflow.db
-            type: FileOrCreate
-        - name: mlflow-artifacts
-          hostPath:
-            path: /tmp/mlflow/mlruns
-            type: DirectoryOrCreate
+      - name: mlflow-storage
+        emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
@@ -47,5 +43,7 @@ spec:
   selector:
     app: mlflow
   ports:
-    - port: 5000
+    - protocol: TCP
+      port: 5000
       targetPort: 5000
+      nodePort: 32000  # change if needed
