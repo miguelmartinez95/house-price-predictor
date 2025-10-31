@@ -103,9 +103,14 @@ jobs:
         if (-not $mlflow) {
             kubectl create deployment mlflow --image=ghcr.io/mlflow/mlflow:latest
         }
-        kubectl expose deployment mlflow --type=NodePort --port=5000 --target-port=5000 --ignore-existing
-
-        # Print NodePort for MLflow
+        
+        # Check if service exists, create NodePort service only if not exists
+        $mlflowSvc = kubectl get svc mlflow --ignore-not-found
+        if (-not $mlflowSvc) {
+            kubectl expose deployment mlflow --type=NodePort --port=5000 --target-port=5000
+        }
+        
+        # Get the NodePort
         $mlflowPort = kubectl get svc mlflow -o jsonpath="{.spec.ports[0].nodePort}"
         Write-Host "MLflow available at http://localhost:$mlflowPort"
 
