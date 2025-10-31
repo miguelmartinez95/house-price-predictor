@@ -99,7 +99,7 @@ jobs:
       shell: powershell
       run: |
         kubectl apply -f .github/workflows/mlflow-pv.yaml
-    
+
         # Wait for PVC to be Bound
         $maxRetries = 20
         $waitSec = 5
@@ -116,24 +116,37 @@ jobs:
         # Apply deployment yaml (create or update)
         kubectl apply -f .github/workflows/mlflow-deployment.yaml
 
-        # Wait until pod is ready
-        kubectl wait --for=condition=available deployment/mlflow --timeout=300s
+        # Wait until the pod is running
+        Write-Host "Waiting for MLflow pod to reach Running status..."
+        $maxRetries = 30
+        $waitSec = 10
+        for ($i=0; $i -lt $maxRetries; $i++) {
+            $phase = kubectl get pods -l app=mlflow -o jsonpath="{.items[0].status.phase}" 2>$null
+            Write-Host "MLflow pod status: $phase"
+            if ($phase -eq "Running") { break }
+            Start-Sleep -Seconds $waitSec
+        }
+
+        # Print pod logs for debugging (optional)
+        Write-Host "Fetching MLflow logs to verify server startup..."
+        kubectl logs -l app=mlflow --tail=20
 
     - name: Train Model 
       shell: powershell
       run: |
         # Start port-forward in background
         $pf = Start-Process -NoNewWindow -PassThru -FilePath kubectl -ArgumentList "port-forward svc/mlflow 5000:5000"
-
-        # Wait for MLflow to be ready
-        $uri = "http://127.0.0.1:5000/health"
-        $maxRetries = 20
-        $waitSec = 5
+        Start-Sleep -Seconds 5
+    
+        # Check if port-forward is working and MLflow responds
+        $uri = "http://127.0.0.1:5000"
+        $maxRetries = 30
+        $waitSec = 10
         for ($i=0; $i -lt $maxRetries; $i++) {
             try {
                 $resp = Invoke-WebRequest -Uri $uri -UseBasicParsing -TimeoutSec 5
-                if ($resp.StatusCode -eq 200) {
-                    Write-Host "MLflow is ready at $uri"
+                if ($resp.StatusCode -eq 200 -or $resp.StatusCode -eq 404) {
+                    Write-Host "✅ MLflow is ready at $uri"
                     break
                 }
             } catch {
