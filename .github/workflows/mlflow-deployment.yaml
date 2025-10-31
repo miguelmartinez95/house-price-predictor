@@ -28,15 +28,12 @@ spec:
           - "--default-artifact-root"
           - "/mlflow/artifacts"
         volumeMounts:
-        - name: mlflow-storage
-          mountPath: /mlflow/artifacts
-        - name: mlflow-db
-          mountPath: /mlflow/db
+        - name: mlflow-pvc
+          mountPath: /mlflow
       volumes:
-      - name: mlflow-storage
-        emptyDir: {}
-      - name: mlflow-db
-        emptyDir: {}   # ensures SQLite file is writable
+      - name: mlflow-pvc
+        persistentVolumeClaim:
+          claimName: mlflow-pvc
 ---
 apiVersion: v1
 kind: Service

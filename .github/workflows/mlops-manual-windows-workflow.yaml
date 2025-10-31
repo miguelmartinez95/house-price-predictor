@@ -139,7 +139,7 @@ jobs:
         --config configs\model_config.yaml `
         --data data\processed\featured_house_data.csv `
         --models-dir models `
-        --mlflow-tracking-uri "http://127.0.0.1:5000"
+        --mlflow-tracking-uri "http://localhost:32000"
 
         # Clean up MLflow port-forward job
         Stop-Job $portForwardJob
