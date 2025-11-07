@@ -6,20 +6,27 @@ on:
       run_all:
         description: 'Run all jobs'
         required: false
-        default: 'true'
+        type: boolean
+        default: true
+
       run_data_processing:
         description: 'Run data processing job'
         required: false
-        default: 'false'
+        type: boolean
+        default: false
 
       run_model_training:
         description: 'Run model trainnig job'
         required: false
-        default: 'false'
+        type: boolean
+        default: false
+
       run_build_and_publish:
         description: 'Run build and publish job'
         required: false
-        default: 'false'
+        type: boolean
+        default: false
+
   release:
     types: [created]
     branches: [ main ]
@@ -29,6 +36,7 @@ on:
 jobs:
   data-processing:
     runs-on: self-hosted
+    if: ${{ inputs.run_data_processing || inputs.run_all }}
 
     steps:
     - name: Checkout code
@@ -43,6 +51,13 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
+        pip install pytest pytest-cov
+
+    - name: 🔍 Run Unit Tests for Data Processing & Feature Engineering
+      run: |
+        echo "Running tests for data pipeline..."
+        pytest tests/processing --maxfail=1 --disable-warnings -q --cov=src/data --cov-report=term-missing
+        pytest tests/features --maxfail=1 --disable-warnings -q --cov=src/features --cov-append --cov-report=term-missing
 
     - name: Process Data 
       shell: powershell
@@ -74,6 +89,7 @@ jobs:
   model-training:
     needs: data-processing
     runs-on: self-hosted
+    if: ${{ inputs.run_model_training || inputs.run_all }}
 
     steps:
     - name: Checkout code
@@ -203,6 +219,7 @@ jobs:
   build-and-publish:
     needs: model-training
     runs-on: self-hosted
+    if: ${{ inputs.run_build_and_publish || inputs.run_all }}
 
     steps:
     - name: Checkout Code 
