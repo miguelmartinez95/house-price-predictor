@@ -56,7 +56,7 @@ jobs:
     - name: 🔍 Run Unit Tests for Data Processing & Feature Engineering
       run: |
         echo "Running tests for data pipeline..."
-        export PYTHONPATH=$PYTHONPATH:$(pwd)/src
+        $env:PYTHONPATH = "$($env:PYTHONPATH);$(Get-Location)\src"
         pytest tests/processing --maxfail=1 --disable-warnings -q --cov=src/data --cov-report=term-missing
         pytest tests/features --maxfail=1 --disable-warnings -q --cov=src/features --cov-append --cov-report=term-missing
 
